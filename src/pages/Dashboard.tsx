@@ -333,17 +333,27 @@ export default function Dashboard() {
   const teilnehmerByKursId = useMemo(() => {
     const map = new Map<string, number>();
     teilnehmer.forEach((t) => {
-      // angemeldete_kurse is multipleapplookup, could be array-like string
-      const kurseStr = t.fields.angemeldete_kurse;
-      if (kurseStr) {
-        // Extract all record IDs from the string (could be multiple URLs)
-        const matches = kurseStr.match(/[a-f0-9]{24}/gi);
+      // angemeldete_kurse is multipleapplookup - can be string, array, or undefined
+      const kurseField = t.fields.angemeldete_kurse;
+      if (!kurseField) return;
+
+      // Handle both string and array formats
+      let urlsToProcess: string[] = [];
+      if (Array.isArray(kurseField)) {
+        urlsToProcess = kurseField.filter((item): item is string => typeof item === 'string');
+      } else if (typeof kurseField === 'string') {
+        urlsToProcess = [kurseField];
+      }
+
+      // Extract record IDs from each URL
+      urlsToProcess.forEach((url) => {
+        const matches = url.match(/[a-f0-9]{24}/gi);
         if (matches) {
           matches.forEach((kursId) => {
             map.set(kursId, (map.get(kursId) || 0) + 1);
           });
         }
-      }
+      });
     });
     return map;
   }, [teilnehmer]);
